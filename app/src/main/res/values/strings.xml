@@ -11,4 +11,5 @@
     <string name="newskeyword">갤럭시S20</string>
     <string name="newskeyword2">모델로</string>
     <string name="newskeyword3">카메라</string>
+    <string name="title_activity_detail_news">DetailNewsActivity</string>
 </resources>

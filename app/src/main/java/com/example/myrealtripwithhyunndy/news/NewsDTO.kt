@@ -14,12 +14,13 @@ import android.os.Parcelable
 
 class NewsDTO  : Parcelable {
 
-    var thumbnail : String ? = null
-    var title : String ? = null
-    var desc : String ? = null
-    var keyword1 : String ? = null
-    var keyword2 : String ? = null
-    var keyword3 : String ? = null
+    var link : String? = ""
+    var thumbnail : String ? = ""
+    var title : String ? = ""
+    var desc : String ? = ""
+    var keyword1 : String ? = ""
+    var keyword2 : String ? = ""
+    var keyword3 : String ? = ""
 
     companion object {
         @JvmField
@@ -30,6 +31,7 @@ class NewsDTO  : Parcelable {
 
                 var news = NewsDTO()
 
+                news.link = source?.readString()
                 news.thumbnail = source?.readString()
                 news.title = source?.readString()
                 news.desc = source?.readString()
@@ -47,6 +49,7 @@ class NewsDTO  : Parcelable {
     }
 
     override fun writeToParcel(dest: Parcel?, flags: Int) {
+        dest?.writeString(link)
         dest?.writeString(thumbnail)
         dest?.writeString(title)
         dest?.writeString(desc)
