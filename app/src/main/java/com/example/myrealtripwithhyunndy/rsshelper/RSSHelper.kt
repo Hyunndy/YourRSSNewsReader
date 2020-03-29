@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.core.net.toUri
 import com.example.myrealtripwithhyunndy.MainActivity
 import com.example.myrealtripwithhyunndy.news.NewsDTO
+import kotlinx.android.synthetic.main.content_main.*
 import org.jsoup.Connection
 import org.jsoup.Jsoup
 import org.xml.sax.Attributes
@@ -38,7 +39,6 @@ RSS 처리를 위한 AsyncTask 클래스.
 3. onProgressUpdate()는 doInBackground()안에서 publishProgress()가 호출될 때마다 자동으로 호출된다.
  */
 
-
 /*
 1. inner class AsyncTaskClass : AsyncTask<Int, Long, String>()
 
@@ -57,6 +57,11 @@ SAX PARSER 란?
  */
 
 
+data class extractedKeyword (
+    var term : String = "",
+    var weight : Double = .0
+)
+
 enum class STATE(var value : Int) {
     IDLE(0),
     TITLE(10),
@@ -72,9 +77,13 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
     var rssNewsThumbnail = arrayListOf<String>()
     var rssNewsDesc = arrayListOf<String>()
 
+    var keywordHelper = KeywordExtractionHelper()
+
     override fun onPreExecute() {
         super.onPreExecute()
 
+        (context as MainActivity).swipeLayout.isRefreshing = true
+        (context as MainActivity).swipeLayout.isEnabled = false
         Toast.makeText(context,"RSS를 읽어옵니다.", Toast.LENGTH_LONG).show()
     }
 
@@ -101,7 +110,6 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
             qName: String?,
             attributes: Attributes?
         ) {
-
             if(qName.equals("item")) {
                 rssNewsNum++
             }
@@ -151,8 +159,6 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
         }
     }
 
-
-
     //1.  RSS 피드를 받아와서 XML 값을 가져와서 파싱하는 코드가 들어옵니다.
     override fun doInBackground(vararg params: URL?): String {
 
@@ -176,11 +182,10 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
             // 파싱
             mXMLReader.parse(mInputResource)
 
-          // 링크로부터 본문&이미지 로딩
-           for(idx in rssNewsLink.indices) {
-               extractImageandDescFromLink(rssNewsLink[idx])
-           }
-
+            // 링크로부터 본문&이미지 로딩
+            for(idx in rssNewsLink.indices) { // 0<= idx <=rssNewsLink -1
+                extractImageandDescFromLink(rssNewsLink[idx])
+            }
         } catch (e : MalformedURLException) {
             e.printStackTrace()
         }
@@ -197,31 +202,26 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
         return "postexcute에 넘겨줘야할게 있다면 여기서 넘겨주자."
     }
 
-    override fun onPostExecute(result: String?) {
-
-        // 여기서 뉴스 리스트를 업데이트 시킨다.
-        (context as MainActivity).updateRSSNewsList(rssNewsTitle, rssNewsLink,  rssNewsThumbnail, rssNewsDesc, rssNewsNum)
-
-
-        super.onPostExecute(result)
+    override fun onProgressUpdate(vararg values: String?) {
+        super.onProgressUpdate(*values)
     }
 
-    // 여기서 newsDTO로 arrayList묶어서 전달한다.
-    private fun testNewsDTOtoMain() : ArrayList<NewsDTO> {
+    override fun onPostExecute(result: String?) {
 
-        var rssNewsList = ArrayList<NewsDTO>()
+        // @TODO = 이거 지금 안들어오는듯.
+        val keywordList = keywordHelper.extractKeywordsFromJSON()
 
-        for(idx in 1..rssNewsNum) {
-            var newsItem = NewsDTO()
-
-            newsItem.link = rssNewsLink[idx]
-            newsItem.title = rssNewsTitle[idx]
-            newsItem.thumbnail = rssNewsThumbnail[idx]
-            newsItem.desc = rssNewsDesc[idx]
-
-            rssNewsList.add(newsItem)
+        for(idx in 0 until rssNewsNum) {
+            Log.d("FIANLKEYWORD", "첫번 째 = " + keywordList[idx][0] + "두번 째 =" + keywordList[idx][1] + "세번 째 =" + keywordList[idx][2])
         }
-        return rssNewsList
+
+
+        // 여기서 뉴스 리스트를 업데이트 시킨다.
+        (context as MainActivity).updateRSSNewsList(rssNewsTitle, rssNewsLink,  rssNewsThumbnail, rssNewsDesc, rssNewsNum, keywordList)
+        (context as MainActivity).swipeLayout.isRefreshing = false
+        (context as MainActivity).swipeLayout.isEnabled = true
+
+        super.onPostExecute(result)
     }
 
     // 링크로부터 이미지 URL 링크 받아옴 -> 어댑터에서 String 값으로 Glide 로 이미지 출력.
@@ -236,7 +236,7 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
         } else {
             if (Patterns.WEB_URL.matcher(link).matches()) {
                 try {
-                    var doc = Jsoup.connect(link).get()
+                    var doc = Jsoup.connect(link).userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.152 Safari/537.36").get()
                     imgLink = doc.select("meta[property=og:image]")[0].attr("content")
                     newsDesc = doc.select("meta[property=og:description]")[0].attr("content")
                 } catch ( e : Exception) {
@@ -250,28 +250,9 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
 
         rssNewsThumbnail.add(imgLink)
         rssNewsDesc.add(newsDesc)
+
+        // 본문으로 부터 키워드를 뽑기 위해 TEXT에서 키워드 추출해주는 API를 이용해 JSONOBJECT를 뽑는다.
+        keywordHelper.getJSONFromDesc(newsDesc)
+
     }
-
-    // 링크로부터 본문 추출
-    private fun extractDescFromLink(link : String) : String{
-
-        var newsDesc = "......"
-
-        if(link == "FailToLoadURL") {
-            newsDesc = "noDesc"
-        } else {
-            if (Patterns.WEB_URL.matcher(link).matches()) {
-                try {
-                    var doc = Jsoup.connect(link).get()
-                    newsDesc = doc.select("meta[property=og:description]")[0].attr("content")
-                } catch ( e : Exception) {
-                    newsDesc = "......"
-                    e.printStackTrace()
-                }
-            }
-        }
-
-        return newsDesc
-    }
-
 }

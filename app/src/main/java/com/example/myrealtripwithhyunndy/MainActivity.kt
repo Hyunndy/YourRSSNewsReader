@@ -48,7 +48,7 @@ enum class RESULTCODE(var value : Int) {
 class MainActivity : AppCompatActivity() {
 
     private val newsItemListAdapter = NewsListRecyclerViewAdapter { it -> openDetailNewsPage(it) }
-
+    private val rssURL = URL("https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,17 +58,15 @@ class MainActivity : AppCompatActivity() {
         newsList.adapter = newsItemListAdapter
         newsList.layoutManager = LinearLayoutManager(this)
 
-        var rssURL = URL("https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko")
-
 
         // TODO : AsyncTask 에서 처리하던 ImageLoad 등을 MainThread 에서 하게 변경
-        var rssNewsReaderTask = RSSHelper(this)
-        rssNewsReaderTask.execute(rssURL)
+        RSSHelper(this).execute(rssURL)
 
         swipeLayout.setOnRefreshListener {
-            // RSS를 다시 받아와야함.
+            RSSHelper(this).execute(rssURL)
         }
     }
+
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -96,33 +94,42 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    private fun updateNewsList(updatedNewsList : ArrayList<NewsDTO>) {
-
-        Toast.makeText(applicationContext, "뉴스리스트를 업데이트 합니다.", Toast.LENGTH_LONG).show()
-
-        newsItemListAdapter.updateNewsList(updatedNewsList, NEWSLISTUPDATE.UPDATE.value)
-    }
 
     // 1. 타이틀
     // 2. 링크
     // 3. 아이템 수
-    fun updateRSSNewsList(rssNewsTitleList : ArrayList<String>, rssNewsLinkList : ArrayList<String>, rssNewsThumbnailList : ArrayList<String>, rssNewsDescList : ArrayList<String> , rssNewsNum : Int) {
+    // 4. 키워드 들
+    fun updateRSSNewsList(rssNewsTitleList : ArrayList<String>, rssNewsLinkList : ArrayList<String>, rssNewsThumbnailList : ArrayList<String>, rssNewsDescList : ArrayList<String> , rssNewsNum : Int , rssKeywordList : ArrayList<ArrayList<String>>) {
 
         // 어댑터에 들어갈 최종 리스트
         var rssNewsList = ArrayList<NewsDTO>()
 
-        for(idx in 1..rssNewsNum) {
 
-            var newsItem = NewsDTO()
+        for(idx in 1 until rssNewsNum) {
 
-            newsItem.link = rssNewsLinkList[idx]
-            newsItem.title = rssNewsTitleList[idx]
-            newsItem.thumbnail = rssNewsThumbnailList[idx]
-            newsItem.desc = rssNewsDescList[idx]
+          var newsItem = NewsDTO()
+
+          newsItem.link = rssNewsLinkList[idx]
+          newsItem.title = rssNewsTitleList[idx]
+          newsItem.thumbnail = rssNewsThumbnailList[idx]
+
+          newsItem.desc = rssNewsDescList[idx]
+
+            var tempArray = rssKeywordList[idx]
+           newsItem.keyword1 = tempArray[0]
+           newsItem.keyword2 = tempArray[1]
+           newsItem.keyword3 = tempArray[2]
 
             rssNewsList.add(newsItem)
         }
 
         updateNewsList(rssNewsList)
+    }
+
+    private fun updateNewsList(updatedNewsList : ArrayList<NewsDTO>) {
+
+        Toast.makeText(applicationContext, "뉴스리스트를 업데이트 합니다.", Toast.LENGTH_LONG).show()
+
+        newsItemListAdapter.updateNewsList(updatedNewsList, NEWSLISTUPDATE.UPDATE.value)
     }
 }
