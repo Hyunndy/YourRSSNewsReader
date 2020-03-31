@@ -58,8 +58,6 @@ class MainActivity : AppCompatActivity() {
         newsList.adapter = newsItemListAdapter
         newsList.layoutManager = LinearLayoutManager(this)
 
-
-        // TODO : AsyncTask 에서 처리하던 ImageLoad 등을 MainThread 에서 하게 변경
         RSSHelper(this).execute(rssURL)
 
         swipeLayout.setOnRefreshListener {
@@ -67,17 +65,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // Inflate the menu; this adds items to the action bar if it is present.
         menuInflater.inflate(R.menu.menu_main, menu)
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         return when (item.itemId) {
             R.id.action_settings -> true
             else -> super.onOptionsItemSelected(item)
@@ -94,7 +87,6 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-
     // 1. 타이틀
     // 2. 링크
     // 3. 아이템 수
@@ -103,7 +95,6 @@ class MainActivity : AppCompatActivity() {
 
         // 어댑터에 들어갈 최종 리스트
         var rssNewsList = ArrayList<NewsDTO>()
-
 
         for(idx in 1 until rssNewsNum) {
 
@@ -126,9 +117,27 @@ class MainActivity : AppCompatActivity() {
         updateNewsList(rssNewsList)
     }
 
+    fun testUpdateList(rssNewsTitleList : ArrayList<String>, rssNewsNum : Int) {
+
+        // 어댑터에 들어갈 최종 리스트
+        var rssNewsList = ArrayList<NewsDTO>()
+
+        for(idx in 1 until rssNewsNum) {
+
+            var newsItem = NewsDTO()
+
+            newsItem.title = rssNewsTitleList[idx]
+
+
+            rssNewsList.add(newsItem)
+        }
+
+        updateNewsList(rssNewsList)
+    }
+
     private fun updateNewsList(updatedNewsList : ArrayList<NewsDTO>) {
 
-        Toast.makeText(applicationContext, "뉴스리스트를 업데이트 합니다.", Toast.LENGTH_LONG).show()
+        //Toast.makeText(applicationContext, "뉴스리스트를 업데이트 합니다.", Toast.LENGTH_LONG).show()
 
         newsItemListAdapter.updateNewsList(updatedNewsList, NEWSLISTUPDATE.UPDATE.value)
     }

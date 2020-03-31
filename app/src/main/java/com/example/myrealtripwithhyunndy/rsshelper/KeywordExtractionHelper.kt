@@ -7,7 +7,9 @@ import java.io.*
 import java.lang.Exception
 import java.net.URL
 import java.net.URLEncoder
+import java.util.*
 import java.util.Collections.sort
+import kotlin.collections.ArrayList
 
 /*
 MainActivity로 부터 뉴스 본문 내용을 전달 받아 키워드 3개를 추출해주는 Class.
@@ -23,38 +25,9 @@ http://api.adams.ai/datamixiApi/keywordextract?key=5174433123451770068&request_i
 return_object array에 term의 갯수 만큼 (term, weight) object를 갖고 있음.
 
  */
-
-/*
-
-{
-return_type: "keywordextract",
-result: "0",
-reason: "Success",
-return_object: [
-{
-term: "안녕안녕|0.3557950210422079",
-weight: 0.3557950210422079
-},
-{
-term: "안녕|0.005070525418223253",
-weight: 0.005070525418223253
-}
-],
-request_id: "id",
-result_code: "success"
-}
-
- */
-
-
-
 class KeywordExtractionHelper {
 
     var descJSONList = ArrayList<String>()
-
-
-    // 1. <키워드1, 키워드2, 키워드3>
-    // 2. <키워드1, 키워드2, 키워드3>
     var keywordList = ArrayList<ArrayList<String>>()
 
 
@@ -64,11 +37,11 @@ class KeywordExtractionHelper {
     // API를 이용해 본문에서 추출
     fun getJSONFromDesc(newsDesc: String) {
 
-        var temp: String
+        var tempJSON: String
         var rssNewsDesc = newsDesc.trim()
 
         if (rssNewsDesc == "......") {
-            temp = "FailToGetAPI"
+            tempJSON = "FailToGetAPI"
         } else {
 
             try {
@@ -90,82 +63,121 @@ class KeywordExtractionHelper {
                 2. readLine() 메서드는 값을 읽어올 때, String값으로 개행문자(엔터값)를 포함해 한줄을 전부 읽어오는 방식입니다.
                  */
                 //4. 버퍼리더에 있는 text를 읽어오기.
-                temp = reader.use(BufferedReader::readText)
+                tempJSON = reader.use(BufferedReader::readText)
 
-                // Log.d("JSONOBJECT =", temp)
             } catch (e: FileNotFoundException) {
-
-                temp = "FailToGetAPI"
-                Log.d("JSONEXCEPTION", "API로부터 아예 값을 못읽어옴.")
+                tempJSON = "FailToGetAPI"
+                e.printStackTrace()
             }
         }
 
-        descJSONList.add(temp)
+        descJSONList.add(tempJSON)
     }
 
     fun extractKeywordsFromJSON(): ArrayList<ArrayList<String>> {
 
-
-
-        Log.d("FIANLKEYWORD", "JSONLIST갯수 = ${descJSONList.size}")
-
+        var noKeywordArray = arrayListOf("noKeyword", "noKeyword", "noKeyword")
 
         // 1. 본문 내용으로 부터
         for (idx in 0..descJSONList.size) {
 
             // 1. 만약 위에서 json파일 얻는거 실패했으면 nokeyword로 넣기.
             try {
+
                 if (descJSONList[idx] == "FailToGetAPI") {
-                    var tempArray = arrayListOf("noKeyword", "noKeyword", "noKeyword")
-                    keywordList.add(tempArray)
+                    keywordList.add(noKeywordArray)
                     continue
                 }
 
-                val tempKeywordList = arrayListOf<String>()
+                var tempKeywordList = arrayListOf<String>()
                 val tempWeightList = arrayListOf<Double>()
+
                 // 2. jsonObjct 가져오기
                 val json = JSONObject(descJSONList[idx])
                 if (json.get("reason") == "Success") {
-                    Log.d("FIANLKEYWORD", "$idx 번째 JSONOBJECT 파싱에 성공해서 안으로 들어옴")
-
                     val tempArray = json.getJSONArray("return_object")
                     var validTermNum = 0
                     for (termIdx in 0 until tempArray.length()) {
                         val obj = tempArray.getJSONObject(termIdx)
 
-                        var tempKeyword = obj.getString("term")
-                        if (!tempKeyword.contains(("_"))) {
-
-                            // | 자르기
-                            val targetIdx = tempKeyword.indexOf("|")
-                            tempKeyword = tempKeyword.substring(0, targetIdx)
-                            Log.d("FIANLKEYWORD", "$idx 번째 JSONOBJECT의 $termIdx 번째 용어 =$tempKeyword")
+                        var tempKeyword = extractTermFromJSON(obj)
+                        if(tempKeyword != "noKeyword") {
                             tempKeywordList.add(tempKeyword)
 
                             val tempWeight = obj.getDouble("weight")
                             tempWeightList.add(tempWeight)
 
                             validTermNum++
-                            if (validTermNum == 3) {
-                                break
-                            }
+                            if (validTermNum == 3)  break
                         }
                     }
+
+                    // 문자가 같으면 해줘야함
+                    tempKeywordList = checkSameWeight(tempKeywordList, tempWeightList)
                     keywordList.add(tempKeywordList)
                 }
             } catch (e: Exception) {
-
-                var tempArray = arrayListOf("noKeyword", "noKeyword", "noKeyword")
-                keywordList.add(tempArray)
-                Log.d("JSONEXCEPTION", "JSON 파서에서 매우 오류")
+                keywordList.add(noKeywordArray)
                 e.printStackTrace()
             }
         }
 
-        Log.d(
-            "FIANLKEYWORD", "키워드리스트 갯수 = ${keywordList.size}"
-        )
-
         return keywordList
+    }
+
+    // JSON파일에서 키워드들을 추출한다.
+    private fun extractTermFromJSON(obj : JSONObject) : String{
+
+        var resultTerm  = "noKeyword"
+        var tempTerm = obj.getString("term")
+
+        // 추출 API에서 띄어쓰기된 단어를 _로 이어서 표시되는 경우가 존재하기 때문에 제외
+        if(tempTerm != "" && !tempTerm.contains("_")) {
+
+            // 추출 API 에서 Term에 term이름 | 가중치로 표시해서 전달해주기 때문에 | 기준으로 자른다.
+            val targetIdx = tempTerm.indexOf("|")
+            resultTerm = tempTerm.substring(0, targetIdx)
+
+            if(resultTerm == "코로") {
+                resultTerm = "코로나19"
+            }
+
+        }
+
+        return resultTerm
+    }
+
+    // 만약 가중치가 같은 키워드가 있다면, 비교 후 오름차순으로 정렬
+    private fun checkSameWeight(keywordList : ArrayList<String>, weightList : ArrayList<Double>) : ArrayList<String>{
+
+        var resultKeywordList = keywordList
+
+        // 0번과 1번
+        if(weightList[0] == weightList[1]) {
+
+            var t1 = keywordList[0]
+            var t2 = keywordList[1]
+
+            if(keywordList[0].compareTo(keywordList[1]) > 0) {
+                var temp = keywordList[0]
+                resultKeywordList[0] = keywordList[1]
+                resultKeywordList[1] = temp
+            }
+
+        } else if(weightList[1] == weightList[2]) {
+
+            var t1 = keywordList[1]
+            var t2 = keywordList[2]
+            if(keywordList[1].compareTo(keywordList[2]) > 0) {
+                var temp = keywordList[1]
+                resultKeywordList[1] = keywordList[2]
+                resultKeywordList[2] = temp
+            }
+
+        } else if((weightList[0] == weightList[1]) && (weightList[1] == weightList[2])) {
+            resultKeywordList.sort()
+        }
+
+        return resultKeywordList
     }
 }

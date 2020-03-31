@@ -18,9 +18,11 @@ import org.xml.sax.InputSource
 import org.xml.sax.SAXException
 import org.xml.sax.helpers.DefaultHandler
 import java.io.IOException
+import java.io.InputStreamReader
 import java.lang.Exception
 import java.lang.Integer.min
 import java.net.ContentHandler
+import java.net.HttpURLConnection
 import java.net.MalformedURLException
 import java.net.URL
 import javax.xml.parsers.ParserConfigurationException
@@ -79,8 +81,13 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
 
     var keywordHelper = KeywordExtractionHelper()
 
+    var testTime : Long = 0
+
     override fun onPreExecute() {
         super.onPreExecute()
+
+        testTime = System.currentTimeMillis()
+
 
         (context as MainActivity).swipeLayout.isRefreshing = true
         (context as MainActivity).swipeLayout.isEnabled = false
@@ -176,28 +183,28 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
             var mRSSHandler = RSSHandler()
             mXMLReader.contentHandler = mRSSHandler
 
-            // URL을 읽어서 파일을 가져옴
-            var mInputResource = InputSource(params[0]?.openStream())
+            var mHttpConnection : HttpURLConnection = params[0]?.openConnection() as HttpURLConnection
+            var rsCode = mHttpConnection.responseCode
+            if(rsCode == HttpURLConnection.HTTP_OK) {
 
-            // 파싱
-            mXMLReader.parse(mInputResource)
+                var mStreamReader = InputStreamReader(mHttpConnection.inputStream, "UTF-8")
+                var mInputResource = InputSource(mStreamReader)
+                mXMLReader.parse(mInputResource)
+            }
 
-            // 링크로부터 본문&이미지 로딩
-            for(idx in rssNewsLink.indices) { // 0<= idx <=rssNewsLink -1
+            //// // 링크로부터 본문&이미지 로딩
+            //for(idx in rssNewsLink.indices) { // 0<= idx <=rssNewsLink -1
+            //    extractImageandDescFromLink(rssNewsLink[idx])
+            //}
+            for(idx in 0..10) { // 0<= idx <=rssNewsLink -1
                 extractImageandDescFromLink(rssNewsLink[idx])
             }
-        } catch (e : MalformedURLException) {
+
+        } catch (e : Exception) {
+            Toast.makeText(context,"RSS 읽어오기를 실패했습니다.", Toast.LENGTH_LONG).show()
             e.printStackTrace()
         }
-        catch (e : ParserConfigurationException) {
-            e.printStackTrace()
-        }
-        catch (e : SAXException) {
-            e.printStackTrace()
-        }
-        catch (e : IOException) {
-            e.printStackTrace()
-        }
+
 
         return "postexcute에 넘겨줘야할게 있다면 여기서 넘겨주자."
     }
@@ -208,16 +215,19 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
 
     override fun onPostExecute(result: String?) {
 
+        var EndtestTime = (System.currentTimeMillis() - testTime ) / 1000
+
+
         // @TODO = 이거 지금 안들어오는듯.
-        val keywordList = keywordHelper.extractKeywordsFromJSON()
+       // val keywordList = keywordHelper.extractKeywordsFromJSON()
 
-        for(idx in 0 until rssNewsNum) {
-            Log.d("FIANLKEYWORD", "첫번 째 = " + keywordList[idx][0] + "두번 째 =" + keywordList[idx][1] + "세번 째 =" + keywordList[idx][2])
-        }
 
+
+        Toast.makeText(context,"RSS읽어오는데 걸린시간 $EndtestTime", Toast.LENGTH_LONG).show()
 
         // 여기서 뉴스 리스트를 업데이트 시킨다.
-        (context as MainActivity).updateRSSNewsList(rssNewsTitle, rssNewsLink,  rssNewsThumbnail, rssNewsDesc, rssNewsNum, keywordList)
+      //  (context as MainActivity).updateRSSNewsList(rssNewsTitle, rssNewsLink,  rssNewsThumbnail, rssNewsDesc, rssNewsNum, keywordList)
+        (context as MainActivity).testUpdateList(rssNewsTitle, rssNewsNum)
         (context as MainActivity).swipeLayout.isRefreshing = false
         (context as MainActivity).swipeLayout.isEnabled = true
 
@@ -230,29 +240,33 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
         var newsDesc = ""
         var imgLink = ""
 
+
         if(link == "FailToLoadURL") {
             imgLink = "noImage"
             newsDesc = "......"
         } else {
-            if (Patterns.WEB_URL.matcher(link).matches()) {
+            //if (Patterns.WEB_URL.matcher(link).matches()) {
                 try {
-                    var doc = Jsoup.connect(link).userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.152 Safari/537.36").get()
-                    imgLink = doc.select("meta[property=og:image]")[0].attr("content")
-                    newsDesc = doc.select("meta[property=og:description]")[0].attr("content")
+                   var doc = Jsoup.connect(link).userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.152 Safari/537.36").get()
+                   imgLink = doc.select("meta[property=og:image]")[0].attr("content")
+                   newsDesc = doc.select("meta[property=og:description]")[0].attr("content")
+                   //imgLink = "noImage"
+                   //newsDesc = "......"
+
                 } catch ( e : Exception) {
                     imgLink = "noImage"
                     newsDesc = "......"
 
                     e.printStackTrace()
                 }
-            }
+           //}
         }
 
         rssNewsThumbnail.add(imgLink)
         rssNewsDesc.add(newsDesc)
 
         // 본문으로 부터 키워드를 뽑기 위해 TEXT에서 키워드 추출해주는 API를 이용해 JSONOBJECT를 뽑는다.
-        keywordHelper.getJSONFromDesc(newsDesc)
+        //keywordHelper.getJSONFromDesc(newsDesc)
 
     }
 }
