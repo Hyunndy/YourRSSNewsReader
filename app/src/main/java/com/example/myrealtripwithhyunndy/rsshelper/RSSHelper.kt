@@ -1,39 +1,22 @@
 package com.example.myrealtripwithhyunndy.rsshelper
 
-import android.app.ProgressDialog
 import android.content.Context
-import android.net.Uri
 import android.os.AsyncTask
-import android.text.TextUtils.indexOf
-import android.util.Log
-import android.util.Patterns
 import android.view.View
 import android.widget.Toast
-import androidx.core.net.toUri
 import com.example.myrealtripwithhyunndy.ACTIVITYSTATE
 import com.example.myrealtripwithhyunndy.MainActivity
-import com.example.myrealtripwithhyunndy.news.NewsDTO
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
-import org.jsoup.Connection
 import org.jsoup.Jsoup
 import org.xml.sax.Attributes
 import org.xml.sax.InputSource
-import org.xml.sax.SAXException
 import org.xml.sax.helpers.DefaultHandler
-import java.io.IOException
 import java.io.InputStreamReader
 import java.lang.Exception
-import java.lang.Integer.min
-import java.net.ContentHandler
 import java.net.HttpURLConnection
-import java.net.MalformedURLException
 import java.net.URL
-import javax.xml.parsers.ParserConfigurationException
-import javax.xml.parsers.SAXParser
 import javax.xml.parsers.SAXParserFactory
-import kotlin.math.min
-import java.util.regex.Pattern as Pattern1
 
 enum class STATE(var value : Int) {
     IDLE(0),
@@ -41,9 +24,19 @@ enum class STATE(var value : Int) {
     LINK(20),
 }
 
-// 1. excute()에 rss피드 주소를 넣어야 하므로 String
-class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
+/*
+created by hyeonjiy 20.04.03
 
+RSS 목록을 가져오기 위한 클래스.
+
+1. SAX Parser를 이용해 구글 RSS 피드의 XML 파일을 파싱한다.
+2. 1의 과정에서 title, link, 뉴스 갯수를 추출한다.
+3. 2에서 얻은 link 에서 Jsoup 라이브러리를 이용해 썸네일, 본문을 읽어온다.
+4. 3에서 얻은 본문에서 KeywordExtractionHelper 클래스에서 https://www.adams.ai/apiPage?keywordextract 키워드 추출 api를 이용해서 키워드 3개를 추출한다.
+5. 위 과정들이 완료되면 MainActivity의 RecyclerView에 올라갈 리스트를 업데이트 해준다.
+ */
+
+class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
 
     var rssNewsNum = 0
     var rssNewsTitle = arrayListOf<String>()
@@ -66,6 +59,7 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
         Toast.makeText(context,"뉴스 리스트를 업로드 중 입니다.", Toast.LENGTH_LONG).show()
     }
 
+    // RSS에서 얻어온 XML을 파싱할 SAX 핸들러
     inner class RSSHandler : DefaultHandler() {
 
         var newsTitle = ""
@@ -78,7 +72,6 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
 
             rssNewsNum = 0
         }
-
 
         // 요소가 시작될 때
         override fun startElement(
@@ -136,34 +129,27 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
         }
     }
 
-    //1.  RSS 피드를 받아와서 XML 값을 가져와서 파싱하는 코드가 들어옵니다.
     override fun doInBackground(vararg params: URL?): String {
 
         try {
+            val mSAXParserFactory = SAXParserFactory.newInstance()
 
-            //어플리케이션이 SAX 베이스의 파서를 구성 및 취득해 XML 문서를 구문 분석 할 수 있도록 하는 팩토리 API를 정의합니다.
-            var mSAXParserFactory = SAXParserFactory.newInstance()
+            val mSAXParser = mSAXParserFactory.newSAXParser()
 
-            // SAX 파서
-            var mSAXParser = mSAXParserFactory.newSAXParser()
+            val mXMLReader = mSAXParser.xmlReader
 
-            // SAX 파서를 위한 XML 리더
-            var mXMLReader = mSAXParser.xmlReader
-
-            // XML 리더를 위한 핸들러
-            var mRSSHandler = RSSHandler()
+            val mRSSHandler = RSSHandler()
             mXMLReader.contentHandler = mRSSHandler
 
-            var mHttpConnection : HttpURLConnection = params[0]?.openConnection() as HttpURLConnection
-            var rsCode = mHttpConnection.responseCode
+            val mHttpConnection : HttpURLConnection = params[0]?.openConnection() as HttpURLConnection
+            val rsCode = mHttpConnection.responseCode
             if(rsCode == HttpURLConnection.HTTP_OK) {
 
-                var mStreamReader = InputStreamReader(mHttpConnection.inputStream, "UTF-8")
-                var mInputResource = InputSource(mStreamReader)
+                val mStreamReader = InputStreamReader(mHttpConnection.inputStream, "UTF-8")
+                val mInputResource = InputSource(mStreamReader)
                 mXMLReader.parse(mInputResource)
             }
 
-            //// // 링크로부터 본문&이미지 로딩
             for(idx in rssNewsLink.indices) {
                 extractImageandDescFromLink(rssNewsLink[idx])
             }
@@ -171,7 +157,6 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
             Toast.makeText(context,"RSS 읽어오기를 실패했습니다.", Toast.LENGTH_LONG).show()
             e.printStackTrace()
         }
-
 
         return ""
     }
@@ -184,7 +169,6 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
 
        val keywordList = keywordHelper.extractKeywordsFromJSON()
 
-        // 여기서 뉴스 리스트를 업데이트 시킨다.
         var main = context as MainActivity
         main.updateRSSNewsList(rssNewsTitle, rssNewsLink,  rssNewsThumbnail, rssNewsDesc, rssNewsNum, keywordList)
 
@@ -196,7 +180,7 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
         super.onPostExecute(result)
     }
 
-    // 링크로부터 이미지 URL 링크 받아옴 -> 어댑터에서 String 값으로 Glide 로 이미지 출력.
+    // Jsoup 라이브러리를 이용해 이미지, 본문을 추출한다.
     private fun extractImageandDescFromLink(link : String){
 
         var newsDesc = ""
@@ -223,6 +207,7 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
         rssNewsThumbnail.add(imgLink)
         rssNewsDesc.add(newsDesc)
 
+        // 본문을 통해서 키워드 추출 api를 통해 얻은 JSON파일을 추출한다.
         keywordHelper.getJSONFromDesc(newsDesc)
     }
 }

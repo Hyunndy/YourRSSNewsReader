@@ -1,15 +1,18 @@
 package com.example.myrealtripwithhyunndy.rsshelper
 
-import android.util.Log
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.*
 import java.lang.Exception
 import java.net.URL
 import java.net.URLEncoder
-import java.util.*
-import java.util.Collections.sort
 import kotlin.collections.ArrayList
+
+/*
+created by hyeonjiy 20.04.03
+
+RSSHelper 클래스에서 얻은 뉴스 본문에서  https://www.adams.ai/apiPage?keywordextract 키워드 추출 api를 이용해 키워드 3개를 추출하는 클래스.
+ */
+
 
 class KeywordExtractionHelper {
 
@@ -94,6 +97,7 @@ class KeywordExtractionHelper {
         return keywordList
     }
 
+    // api에서 반환하는 문자열에서 키워드를 추출하는 함수.
     private fun extractTermFromJSON(obj : JSONObject) : String{
 
         var resultTerm  = ""

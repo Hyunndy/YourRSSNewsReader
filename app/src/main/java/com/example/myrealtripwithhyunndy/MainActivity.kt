@@ -20,6 +20,16 @@ import java.lang.Exception
 import java.net.URL
 
 
+/*
+created by hyeonjiy 20.04.03
+
+뉴스 리스트가 표시되는 액티비티.
+
+1. 생성 시 RSSHelper AsyncTask가 실행되며 RSS 목록을 로드함.
+2. RSSHelper AsyncTask가 끝나는 시점에서 RecyclerView 업데이트. ( 어댑터: NewsListRecyclerViewAdapter )
+3. 뉴스 선택 시 DetailNewsActivity 실행.
+ */
+
 enum class NEWSLISTUPDATE(var value : Int) {
     UPDATE(10)
 }
