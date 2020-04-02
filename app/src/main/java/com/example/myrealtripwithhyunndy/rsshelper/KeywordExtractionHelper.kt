@@ -11,20 +11,6 @@ import java.util.*
 import java.util.Collections.sort
 import kotlin.collections.ArrayList
 
-/*
-MainActivity로 부터 뉴스 본문 내용을 전달 받아 키워드 3개를 추출해주는 Class.
-
-
-ADAMS.ai의 키워드 추출 API 사용
-
-http://api.adams.ai/datamixiApi/keywordextract?key=5174433123451770068&request_id=id&text=%22%EC%95%88%EB%85%95%ED%95%98%EC%84%B8%EC%9A%94%EC%95%88%EB%85%95%EC%95%88%EB%85%95%22
-
-키워드 결과가 JSON으로 나오기 때문에 JSON 파싱이 필요하다.
-
-
-return_object array에 term의 갯수 만큼 (term, weight) object를 갖고 있음.
-
- */
 class KeywordExtractionHelper {
 
     var descJSONList = ArrayList<String>()
@@ -45,24 +31,12 @@ class KeywordExtractionHelper {
         } else {
 
             try {
-                // 1. 요청 보낼 URL을 InputStream에 넣어준다. -> openStream()
                 val encodedDesc = URLEncoder.encode(rssNewsDesc, "UTF-8")
                 val stream = URL("$apiURL?key=$keyValue&text=$encodedDesc").openStream()
 
-                // 2. BuffredReader를 이용해 inputStream에의 내용을 읽어온다.
                 val inputStream = InputStreamReader(stream, "UTF-8")
-
-                //3. inputStream이 char단위다.
                 val reader = BufferedReader(inputStream)
 
-                /*
-                일반적으로 BufferedReader 를 통해 입력받을때 유의하셔야 할 점이 몇가지 있습니다.
-
-                1. 기본적으로 BufferedReader는 한 줄을 통째로 입력받는 방법으로 주로 쓰입니다.
-
-                2. readLine() 메서드는 값을 읽어올 때, String값으로 개행문자(엔터값)를 포함해 한줄을 전부 읽어오는 방식입니다.
-                 */
-                //4. 버퍼리더에 있는 text를 읽어오기.
                 tempJSON = reader.use(BufferedReader::readText)
 
             } catch (e: FileNotFoundException) {
@@ -76,12 +50,9 @@ class KeywordExtractionHelper {
 
     fun extractKeywordsFromJSON(): ArrayList<ArrayList<String>> {
 
-        var noKeywordArray = arrayListOf("noKeyword", "noKeyword", "noKeyword")
+        var noKeywordArray = arrayListOf("", "", "")
 
-        // 1. 본문 내용으로 부터
         for (idx in 0..descJSONList.size) {
-
-            // 1. 만약 위에서 json파일 얻는거 실패했으면 nokeyword로 넣기.
             try {
 
                 if (descJSONList[idx] == "FailToGetAPI") {
@@ -101,7 +72,7 @@ class KeywordExtractionHelper {
                         val obj = tempArray.getJSONObject(termIdx)
 
                         var tempKeyword = extractTermFromJSON(obj)
-                        if(tempKeyword != "noKeyword") {
+                        if(tempKeyword != "") {
                             tempKeywordList.add(tempKeyword)
 
                             val tempWeight = obj.getDouble("weight")
@@ -111,8 +82,6 @@ class KeywordExtractionHelper {
                             if (validTermNum == 3)  break
                         }
                     }
-
-                    // 문자가 같으면 해줘야함
                     tempKeywordList = checkSameWeight(tempKeywordList, tempWeightList)
                     keywordList.add(tempKeywordList)
                 }
@@ -125,10 +94,9 @@ class KeywordExtractionHelper {
         return keywordList
     }
 
-    // JSON파일에서 키워드들을 추출한다.
     private fun extractTermFromJSON(obj : JSONObject) : String{
 
-        var resultTerm  = "noKeyword"
+        var resultTerm  = ""
         var tempTerm = obj.getString("term")
 
         // 추출 API에서 띄어쓰기된 단어를 _로 이어서 표시되는 경우가 존재하기 때문에 제외
@@ -154,9 +122,6 @@ class KeywordExtractionHelper {
 
         // 0번과 1번
         if(weightList[0] == weightList[1]) {
-
-            var t1 = keywordList[0]
-            var t2 = keywordList[1]
 
             if(keywordList[0].compareTo(keywordList[1]) > 0) {
                 var temp = keywordList[0]

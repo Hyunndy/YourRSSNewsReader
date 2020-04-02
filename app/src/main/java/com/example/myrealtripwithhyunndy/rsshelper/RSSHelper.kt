@@ -1,15 +1,19 @@
 package com.example.myrealtripwithhyunndy.rsshelper
 
+import android.app.ProgressDialog
 import android.content.Context
 import android.net.Uri
 import android.os.AsyncTask
 import android.text.TextUtils.indexOf
 import android.util.Log
 import android.util.Patterns
+import android.view.View
 import android.widget.Toast
 import androidx.core.net.toUri
+import com.example.myrealtripwithhyunndy.ACTIVITYSTATE
 import com.example.myrealtripwithhyunndy.MainActivity
 import com.example.myrealtripwithhyunndy.news.NewsDTO
+import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 import org.jsoup.Connection
 import org.jsoup.Jsoup
@@ -31,39 +35,6 @@ import javax.xml.parsers.SAXParserFactory
 import kotlin.math.min
 import java.util.regex.Pattern as Pattern1
 
-/*
-RSS 처리를 위한 AsyncTask 클래스.
-
-1. 스레드안에서 실행될 코드는 doInBackground() 에 넣어두고 UI에 접근할 코드는 나머지에 넣어둔다.
-
-2. AsyncTask 도 스레드를 실행하는 것과 같기 때문에 스레드 안에서 실행될 대부분의 코드는 doInBackground() 안에 들어가있게 되며 중간중간 화면에 표시하기 위한 코드 실행을 위해 onProgressUpdate()가 호출되는 것이다.
-
-3. onProgressUpdate()는 doInBackground()안에서 publishProgress()가 호출될 때마다 자동으로 호출된다.
- */
-
-/*
-1. inner class AsyncTaskClass : AsyncTask<Int, Long, String>()
-
-제네릭 타입을 3개 지정해주어야 한다.
-제네릭1) excute() 매개변수 타입
-제네릭2) publishProgress() 매개변수 타입
-제네릭3) doInBackground()의 반환 타입 이자 onPostExcute의 매개변수 타입
- */
-
-
-/*
-SAX PARSER 란?
-<Simple API for XML>
-이벤트 중심의 인터페이스다.
-프로그래머가 일어날 수 있는 이벤트를 설정해 놓으면, SAX는 그 이벤트가 일어났을 때 제어권을 갖고 상황을 처리한다.
- */
-
-
-data class extractedKeyword (
-    var term : String = "",
-    var weight : Double = .0
-)
-
 enum class STATE(var value : Int) {
     IDLE(0),
     TITLE(10),
@@ -73,6 +44,7 @@ enum class STATE(var value : Int) {
 // 1. excute()에 rss피드 주소를 넣어야 하므로 String
 class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
 
+
     var rssNewsNum = 0
     var rssNewsTitle = arrayListOf<String>()
     var rssNewsLink = arrayListOf<String>()
@@ -81,21 +53,19 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
 
     var keywordHelper = KeywordExtractionHelper()
 
-    var testTime : Long = 0
 
     override fun onPreExecute() {
         super.onPreExecute()
 
-        testTime = System.currentTimeMillis()
+        var main = context as MainActivity
+        main.swipeLayout.isRefreshing = true
+        main.swipeLayout.isEnabled = false
+        main.progressBar.visibility = View.VISIBLE
+        main.activityState = ACTIVITYSTATE.UPDATE.value
 
-
-        (context as MainActivity).swipeLayout.isRefreshing = true
-        (context as MainActivity).swipeLayout.isEnabled = false
-        Toast.makeText(context,"RSS를 읽어옵니다.", Toast.LENGTH_LONG).show()
+        Toast.makeText(context,"뉴스 리스트를 업로드 중 입니다.", Toast.LENGTH_LONG).show()
     }
 
-    // XML 문서가 시작되고 끝날 때, 요소가 시작될 때와 종료될 때 호출되는 함수.
-    // 이곳에서 값을 읽어와 문자열을 구성하는 것이다.
     inner class RSSHandler : DefaultHandler() {
 
         var newsTitle = ""
@@ -170,6 +140,7 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
     override fun doInBackground(vararg params: URL?): String {
 
         try {
+
             //어플리케이션이 SAX 베이스의 파서를 구성 및 취득해 XML 문서를 구문 분석 할 수 있도록 하는 팩토리 API를 정의합니다.
             var mSAXParserFactory = SAXParserFactory.newInstance()
 
@@ -193,20 +164,16 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
             }
 
             //// // 링크로부터 본문&이미지 로딩
-            //for(idx in rssNewsLink.indices) { // 0<= idx <=rssNewsLink -1
-            //    extractImageandDescFromLink(rssNewsLink[idx])
-            //}
-            for(idx in 0..10) { // 0<= idx <=rssNewsLink -1
+            for(idx in rssNewsLink.indices) {
                 extractImageandDescFromLink(rssNewsLink[idx])
             }
-
         } catch (e : Exception) {
             Toast.makeText(context,"RSS 읽어오기를 실패했습니다.", Toast.LENGTH_LONG).show()
             e.printStackTrace()
         }
 
 
-        return "postexcute에 넘겨줘야할게 있다면 여기서 넘겨주자."
+        return ""
     }
 
     override fun onProgressUpdate(vararg values: String?) {
@@ -215,21 +182,16 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
 
     override fun onPostExecute(result: String?) {
 
-        var EndtestTime = (System.currentTimeMillis() - testTime ) / 1000
-
-
-        // @TODO = 이거 지금 안들어오는듯.
-       // val keywordList = keywordHelper.extractKeywordsFromJSON()
-
-
-
-        Toast.makeText(context,"RSS읽어오는데 걸린시간 $EndtestTime", Toast.LENGTH_LONG).show()
+       val keywordList = keywordHelper.extractKeywordsFromJSON()
 
         // 여기서 뉴스 리스트를 업데이트 시킨다.
-      //  (context as MainActivity).updateRSSNewsList(rssNewsTitle, rssNewsLink,  rssNewsThumbnail, rssNewsDesc, rssNewsNum, keywordList)
-        (context as MainActivity).testUpdateList(rssNewsTitle, rssNewsNum)
-        (context as MainActivity).swipeLayout.isRefreshing = false
-        (context as MainActivity).swipeLayout.isEnabled = true
+        var main = context as MainActivity
+        main.updateRSSNewsList(rssNewsTitle, rssNewsLink,  rssNewsThumbnail, rssNewsDesc, rssNewsNum, keywordList)
+
+        main.swipeLayout.isRefreshing = false
+        main.swipeLayout.isEnabled = true
+        main.progressBar.visibility = View.GONE
+        main.activityState = ACTIVITYSTATE.IDLE.value
 
         super.onPostExecute(result)
     }
@@ -245,13 +207,10 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
             imgLink = "noImage"
             newsDesc = "......"
         } else {
-            //if (Patterns.WEB_URL.matcher(link).matches()) {
                 try {
                    var doc = Jsoup.connect(link).userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.152 Safari/537.36").get()
                    imgLink = doc.select("meta[property=og:image]")[0].attr("content")
                    newsDesc = doc.select("meta[property=og:description]")[0].attr("content")
-                   //imgLink = "noImage"
-                   //newsDesc = "......"
 
                 } catch ( e : Exception) {
                     imgLink = "noImage"
@@ -259,14 +218,11 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
 
                     e.printStackTrace()
                 }
-           //}
         }
 
         rssNewsThumbnail.add(imgLink)
         rssNewsDesc.add(newsDesc)
 
-        // 본문으로 부터 키워드를 뽑기 위해 TEXT에서 키워드 추출해주는 API를 이용해 JSONOBJECT를 뽑는다.
-        //keywordHelper.getJSONFromDesc(newsDesc)
-
+        keywordHelper.getJSONFromDesc(newsDesc)
     }
 }
