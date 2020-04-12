@@ -1,6 +1,8 @@
 # myrealtripwithhyunndy
 
-@TODO : JSoup 사용 부분 서버단으로 넘겨서 구현할 수 있게 적용이 필요(for 시간단축)
+@TODO
+: JSoup 사용 부분 서버단으로 넘겨서 구현할 수 있게 적용이 필요(for 시간단축)
+: Jetpack Paging Library 도입할 수 있는지 없는지 테스트 필요
 
 마이리얼트립 챌린지
 ~RSS 뉴스 리더 어플리케이션~
