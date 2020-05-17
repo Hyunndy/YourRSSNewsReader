@@ -16,15 +16,15 @@ API에서 받아오는건 APIModels.
  */
 
  data class RSSList(
-     var page : Int,
-     var items : List<RSSItem>? = null
+     var page : Int = 0,
+     var items : MutableList<RSSItem>? = null
  )
 
  data class RSSItem(
-    var title : String?,
-    var link : String?,
-    var description : String?,
-    var imgLink : String?,
+    var title : String? = "",
+    var link : String? = "",
+    var description : String? = "",
+    var imgLink : String? = "",
     var keyword : ArrayList<String>? = null
 )
 

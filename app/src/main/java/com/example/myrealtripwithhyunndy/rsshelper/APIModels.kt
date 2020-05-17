@@ -14,9 +14,10 @@ data class RSSFeedResponse constructor(
 @Root(name = "channel", strict = false)
 data class RSSChannelResponse constructor(
 
+    /*
     @field:Element(name="title")
     var title : String? = "",
-
+     */
 
     @field:ElementList(entry = "item", inline = true, required = false)
     var items : List<RSSitemResponse>? = null
@@ -29,8 +30,10 @@ data class RSSitemResponse constructor (
     var title : String? = "",
 
     @field:Element(name="link", required = false)
-    var link : String? = "",
+    var link : String? = ""
 
+    /*
     @field:Element(name="description", required = false)
     var description : String? =""
+     */
 )

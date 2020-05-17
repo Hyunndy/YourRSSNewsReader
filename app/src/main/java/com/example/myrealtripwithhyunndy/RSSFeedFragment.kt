@@ -14,6 +14,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.myrealtripwithhyunndy.news.NewsDTO
 import com.example.myrealtripwithhyunndy.news.NewsListRecyclerViewAdapter
 import com.example.myrealtripwithhyunndy.rsshelper.RSSFeedViewModel
@@ -80,13 +81,16 @@ class RSSFeedFragment : Fragment() {
         }
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            var view = holder.itemView
+            val view = holder.itemView
 
             // 뉴스 타이틀
             view.news_title.text = newsList?.get(position)?.title
 
             // 뉴스 설명
             view.news_desc.text = newsList?.get(position)?.description
+
+            // 이미지
+            Glide.with(view.news_thumbnail).asBitmap().load(newsList?.get(position)?.imgLink).error(R.drawable.ic_newspaper).into((view.news_thumbnail))
 
             // 클릭 이벤트
             view.setOnClickListener {

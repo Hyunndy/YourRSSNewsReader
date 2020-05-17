@@ -23,8 +23,7 @@ class RssListManager(private val api: RestApi = RestApi()) {
         val list = response?.channel?.items?.map {
             RSSItem(
                 it.title,
-                it.link,
-                it.description
+                it.link
             )
         }
 
