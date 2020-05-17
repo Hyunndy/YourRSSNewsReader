@@ -7,7 +7,6 @@ import android.widget.Toast
 import com.example.myrealtripwithhyunndy.ACTIVITYSTATE
 import com.example.myrealtripwithhyunndy.MainActivity
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.content_main.*
 import org.jsoup.Jsoup
 import org.xml.sax.Attributes
 import org.xml.sax.InputSource
@@ -36,6 +35,7 @@ RSS 목록을 가져오기 위한 클래스.
 5. 위 과정들이 완료되면 MainActivity의 RecyclerView에 올라갈 리스트를 업데이트 해준다.
  */
 
+/*
 class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
 
     var rssNewsNum = 0
@@ -211,3 +211,5 @@ class RSSHelper(var context: Context) : AsyncTask<URL, String, String> () {
         keywordHelper.getJSONFromDesc(newsDesc)
     }
 }
+
+ */

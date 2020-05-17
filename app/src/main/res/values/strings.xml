@@ -12,4 +12,7 @@
     <string name="newskeyword2">모델로</string>
     <string name="newskeyword3">카메라</string>
     <string name="title_activity_detail_news">DetailNewsActivity</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>
