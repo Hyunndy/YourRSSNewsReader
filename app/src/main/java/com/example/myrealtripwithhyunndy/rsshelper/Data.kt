@@ -15,9 +15,9 @@ API에서 받아오는건 APIModels.
 
  */
 
- data class RSSList(
+ data class RSSChannel(
      var page : Int = 0,
-     var items : MutableList<RSSItem>? = null
+     var items : List<RSSItem>? = null
  )
 
  data class RSSItem(

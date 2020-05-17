@@ -1,5 +1,6 @@
 package com.example.myrealtripwithhyunndy.rsshelper
 
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.lifecycle.MutableLiveData
@@ -17,7 +18,10 @@ class RSSFeedViewModel : ViewModel() {
     private var rssList : MutableLiveData<MutableList<RSSItem>>? = MutableLiveData()
 
     //중간
-   // private var rssItems : List<RSSItem>? = null
+    private var rssItems : List<RSSItem>? = null
+
+    //끝
+    private var tempItems : MutableList<RSSItem>? = mutableListOf()
 
 
     private val rssManager by lazy { RssListManager() }
@@ -30,6 +34,9 @@ class RSSFeedViewModel : ViewModel() {
 
     fun getRSSList() : MutableLiveData<MutableList<RSSItem>>? = rssList
 
+    fun getItemSize() : Int = tempItems!!.size
+
+
     private fun loadRSSList() {
 
         job = viewModelScope.launch(Dispatchers.Main) {
@@ -40,11 +47,10 @@ class RSSFeedViewModel : ViewModel() {
                     "ceid" to "KR:ko"
                 )
 
-                val rssItems = rssManager.getRssList(param)
-                if(rssItems != null) {
-                    getDetailNews(rssItems)
-                }
-
+                //@TODO
+                rssItems = rssManager.getRssList(param)
+                getDetailNews(0)
+                Log.d("TEST33", "${rssItems?.size}@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
 
             } catch (e : Exception) {
                 e.printStackTrace()
@@ -52,33 +58,41 @@ class RSSFeedViewModel : ViewModel() {
         }
     }
 
-    private fun getDetailNews(rssItems : List<RSSItem>?) {
+     fun getDetailNews(startIdx : Int){//rssItems : List<RSSItem>?) {
+
+         if(rssItems == null) return
+
+         if(startIdx > rssItems!!.size) return
 
           viewModelScope.launch(Dispatchers.Main) {
             try{
                 if(job.isActive) job.join()
                 if(rssItems == null) cancel()
 
-                val tempList : MutableList<RSSItem> = mutableListOf()
+                for(idx in startIdx..startIdx+5){//rssItems!!.indices) {
 
-                for(idx in 0..5){//rssItems!!.indices) {
+                    if(rssItems?.get(idx) == null) break
 
-                    //val temp : RSSItem = rssList?.value!![idx]
                     val temp : RSSItem = rssItems!![idx]
 
-                    if(temp.link == "") {
+                    if(temp.link == null) {
                         temp.imgLink = ""
                         temp.description = ""
                     } else {
-                        val doc = getJsoup(temp.link!!)
-                        temp.imgLink = doc.select("meta[property=og:image]")[0].attr("content")
-                        temp.description = doc.select("meta[property=og:description]")[0].attr("content")
+                        try{
+                            val doc = getJsoup(temp.link!!)
+                            temp.imgLink = doc.select("meta[property=og:image]")[0]?.attr("content")
+                            temp.description =  doc.select("meta[property=og:description]")[0]?.attr("content")
+                        } catch (e: Exception) {
+                            temp.imgLink = ""
+                            temp.description = ""
+                        }
                     }
 
-                    tempList.add(temp)
+                    tempItems?.add(temp)
                 }
 
-                rssList?.value = tempList
+                rssList?.value = tempItems
 
             } catch (e : Exception) {
                 e.printStackTrace()
