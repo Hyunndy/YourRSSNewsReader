@@ -31,6 +31,12 @@ class RSSFeedViewModel : ViewModel() {
 
     fun getItemSize() : Int = jsoupList.size
 
+    fun refresh() {
+        apiList = null
+        jsoupList.clear()
+        jsoupNum = 0
+    }
+
 
     fun loadRSSList() {
 

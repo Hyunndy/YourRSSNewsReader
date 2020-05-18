@@ -1,6 +1,8 @@
 package com.example.myrealtripwithhyunndy.rsshelper
 
 import android.os.Parcelable
+import android.view.ViewGroup
+import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.parcel.Parcelize
 import org.simpleframework.xml.Element
 import org.simpleframework.xml.ElementList
@@ -28,4 +30,18 @@ API에서 받아오는건 APIModels.
     var keyword : ArrayList<String>? = null
 )
 
+interface ItemAdapter {
 
+    fun onCreateViewHolder(parent: ViewGroup): RecyclerView.ViewHolder
+
+    fun onBindViewHolder(holder: RecyclerView.ViewHolder, item: ViewType)
+}
+
+interface ViewType {
+    fun getViewType(): Int
+}
+
+object AdapterType {
+    val NEWS = 1
+    val LOADING = 2
+}

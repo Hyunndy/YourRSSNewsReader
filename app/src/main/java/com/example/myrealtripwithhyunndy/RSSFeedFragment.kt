@@ -3,20 +3,20 @@ package com.example.myrealtripwithhyunndy
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.collection.SparseArrayCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.bumptech.glide.Glide
-import com.example.myrealtripwithhyunndy.rsshelper.RSSFeedViewModel
-import com.example.myrealtripwithhyunndy.rsshelper.RSSItem
+import com.example.myrealtripwithhyunndy.rsshelper.*
 import kotlinx.android.synthetic.main.fragment_rssfeed.*
-import kotlinx.android.synthetic.main.news_item.view.*
+import kotlinx.android.synthetic.main.item_news.view.*
 
 /**
 다 받고. ViewModel에 저장해놨잖아.
@@ -24,13 +24,10 @@ import kotlinx.android.synthetic.main.news_item.view.*
  그 다음 10개씩 끊어서. 하자고!
  */
 
-
-class RSSFeedFragment : Fragment() {
+class RSSFeedFragment : Fragment(), SwipeRefreshLayout.OnRefreshListener {
 
     private lateinit var viewModel: RSSFeedViewModel
-
     private lateinit var RSSFeedListAdapter: RSSFeedRecyclerViewAdapter
-
     private var requestJsoup = false
 
     override fun onCreateView(
@@ -40,23 +37,16 @@ class RSSFeedFragment : Fragment() {
 
         // 뷰모델
         viewModel = ViewModelProvider(requireActivity())[RSSFeedViewModel::class.java]
-
         viewModel.getRSSList()?.observe(viewLifecycleOwner, Observer {
-
                 RSSFeedListAdapter.newsList = it
-
                 RSSFeedListAdapter.notifyDataSetChanged()
-
                 if(requestJsoup) requestJsoup = false
+                swipeLayout.isRefreshing = false
         })
-
-
-
 
         return inflater.inflate(R.layout.fragment_rssfeed, container, false)
     }
 
-    //@TODO 인터페이스 생성 / 클릭하면 액티비티에서 상세노트로 Fragment 교체할 수 있도록.
     interface OnNewsSelectedListner {
         fun onNewsSelected(selectedIdx: Int)
     }
@@ -76,6 +66,16 @@ class RSSFeedFragment : Fragment() {
         }
 
         rss_recylerview.adapter = RSSFeedListAdapter
+
+        //swipe리스너
+        swipeLayout.setOnRefreshListener(this)
+    }
+
+    override fun onRefresh() {
+        RSSFeedListAdapter.newsList?.clear()
+        RSSFeedListAdapter.notifyDataSetChanged()
+        viewModel.refresh()
+        viewModel.loadRSSList()
     }
 
     //리사이클러뷰 어댑터
@@ -84,12 +84,34 @@ class RSSFeedFragment : Fragment() {
 
         var newsList: MutableList<RSSItem>? = null
 
+        /*
+        //@TODO
+        // MOVIE 혹은 LOADING 아이템의 종류를 파악하기 위해
+        private lateinit var items: ArrayList<ViewType> // (1)
+
+        private val loadingItem = object : ViewType { // (3)
+            override fun getViewType() = AdapterType.LOADING
+        }
+
+        // 두 종류의 어댑터를 위한 배열 컬렉션
+        private var delegateAdapters = SparseArrayCompat<ItemAdapter>()
+
+        init{
+            delegateAdapters.put(AdapterType.LOADING, LoadingItemAdapter())
+            delegateAdapters.put(AdapterType.NEWS, MovieItemAdapter(listener))
+            items = ArrayList()
+            items.add(loadingItem)
+        }
+         private inner class LoadingViewHolder(view: View) : RecyclerView.ViewHolder(view)
+         */
         private inner class CustomViewHolder(view: View) : RecyclerView.ViewHolder(view)
+
+
 
         @SuppressLint("InflateParams")
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
             return CustomViewHolder(
-                LayoutInflater.from(parent.context).inflate(R.layout.news_item, parent, false)
+                LayoutInflater.from(parent.context).inflate(R.layout.item_news, parent, false)
             )
         }
 
@@ -157,6 +179,8 @@ class RSSFeedFragment : Fragment() {
 
         }
     }
+
+
 }
 
 
