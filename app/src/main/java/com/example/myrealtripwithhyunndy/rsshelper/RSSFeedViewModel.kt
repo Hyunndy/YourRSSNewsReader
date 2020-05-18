@@ -1,43 +1,38 @@
 package com.example.myrealtripwithhyunndy.rsshelper
 
 import android.util.Log
-import android.view.View
-import android.widget.Toast
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.*
 import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
 import java.lang.Exception
 
 
 class RSSFeedViewModel : ViewModel() {
 
-    //최종
+    //최종적으로 UI에 뿌려지게될 데이터
     private var rssList : MutableLiveData<MutableList<RSSItem>>? = MutableLiveData()
 
-    //중간
-    private var rssItems : List<RSSItem>? = null
+    //API로부터 받아온 리스트
+    private var apiList : List<RSSItem>? = null
 
-    //끝
-    private var tempItems : MutableList<RSSItem>? = mutableListOf()
+    //API로부터 받아온 리스트 + Jsoup으로 만든 리스트
+    private var jsoupList : MutableList<RSSItem> = mutableListOf()
 
+    var jsoupNum : Int = 0
 
     private val rssManager by lazy { RssListManager() }
-    private var startPos : Int = 0
     private lateinit var job : Job
+    private lateinit var  job2 : Job
 
-    init{
-        loadRSSList()
-    }
 
     fun getRSSList() : MutableLiveData<MutableList<RSSItem>>? = rssList
 
-    fun getItemSize() : Int = tempItems!!.size
+    fun getItemSize() : Int = jsoupList.size
 
 
-    private fun loadRSSList() {
+    fun loadRSSList() {
 
         job = viewModelScope.launch(Dispatchers.Main) {
             try {
@@ -47,10 +42,9 @@ class RSSFeedViewModel : ViewModel() {
                     "ceid" to "KR:ko"
                 )
 
-                //@TODO
-                rssItems = rssManager.getRssList(param)
-                getDetailNews(0)
-                Log.d("TEST33", "${rssItems?.size}@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+                apiList = rssManager.getRssList(param)
+                getDetailNews()
+
 
             } catch (e : Exception) {
                 e.printStackTrace()
@@ -58,41 +52,54 @@ class RSSFeedViewModel : ViewModel() {
         }
     }
 
-     fun getDetailNews(startIdx : Int){//rssItems : List<RSSItem>?) {
+     fun getDetailNews() {
 
-         if(rssItems == null) return
+         //api로부터 받아온게 없다면 return
+         //받아오려는 데이터가 apiList보다 커졌다면
+         if(apiList == null|| apiList!!.size <= jsoupNum) return
 
-         if(startIdx > rssItems!!.size) return
 
-          viewModelScope.launch(Dispatchers.Main) {
+          job2 = viewModelScope.launch(Dispatchers.Main) {
             try{
-                if(job.isActive) job.join()
-                if(rssItems == null) cancel()
+                val startIdx = jsoupNum
 
-                for(idx in startIdx..startIdx+5){//rssItems!!.indices) {
+                //6개씩
+                for(idx in startIdx..startIdx+5) {
 
-                    if(rssItems?.get(idx) == null) break
+                    Log.d("TEST33" , "JSOUP 요청 번호 = $idx")
 
-                    val temp : RSSItem = rssItems!![idx]
+                    if(idx >= apiList!!.size) break
 
-                    if(temp.link == null) {
+                    if(apiList?.get(idx) == null) break
+
+                    val temp : RSSItem = apiList?.get(idx)!!
+
+                    // 링크가 없는 경우
+                    if(temp.link == "") {
                         temp.imgLink = ""
                         temp.description = ""
                     } else {
+                        // JSOUP으로 HTML 태그 긁어오기
                         try{
                             val doc = getJsoup(temp.link!!)
-                            temp.imgLink = doc.select("meta[property=og:image]")[0]?.attr("content")
-                            temp.description =  doc.select("meta[property=og:description]")[0]?.attr("content")
+                            if(doc != null) {
+                                temp.imgLink = doc.select("meta[property=og:image]")[0]?.attr("content")
+                                temp.description =  doc.select("meta[property=og:description]")[0]?.attr("content")
+                            } else {
+                                temp.imgLink = ""
+                                temp.description = ""
+                            }
                         } catch (e: Exception) {
                             temp.imgLink = ""
                             temp.description = ""
                         }
                     }
 
-                    tempItems?.add(temp)
+                    jsoupList.add(temp)
+                    jsoupNum += 1
                 }
 
-                rssList?.value = tempItems
+                rssList?.value = jsoupList
 
             } catch (e : Exception) {
                 e.printStackTrace()
@@ -100,44 +107,17 @@ class RSSFeedViewModel : ViewModel() {
         }
     }
 
-     private suspend fun getJsoup(url : String) =
-
+     private suspend fun getJsoup(url : String)  =
          withContext(Dispatchers.IO) {
-             Jsoup.connect(url).userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.152 Safari/537.36").get()
+             try{
+                 Jsoup.connect(url)
+                     .userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6")
+                     .referrer("http://www.google.com")
+                     .get()
+             } catch (e: Exception) {
+                null
+             }
          }
-
-    /*
-        // Jsoup 라이브러리를 이용해 이미지, 본문을 추출한다.
-    private fun extractImageandDescFromLink(link : String){
-
-        var newsDesc = ""
-        var imgLink = ""
-
-
-        if(link == "FailToLoadURL") {
-            imgLink = "noImage"
-            newsDesc = "......"
-        } else {
-                try {
-                   var doc = Jsoup.connect(link).userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.152 Safari/537.36").get()
-                   imgLink = doc.select("meta[property=og:image]")[0].attr("content")
-                   newsDesc = doc.select("meta[property=og:description]")[0].attr("content")
-
-                } catch ( e : Exception) {
-                    imgLink = "noImage"
-                    newsDesc = "......"
-
-                    e.printStackTrace()
-                }
-        }
-
-        rssNewsThumbnail.add(imgLink)
-        rssNewsDesc.add(newsDesc)
-
-        // 본문을 통해서 키워드 추출 api를 통해 얻은 JSON파일을 추출한다.
-        keywordHelper.getJSONFromDesc(newsDesc)
-    }
-     */
 }
 
 
