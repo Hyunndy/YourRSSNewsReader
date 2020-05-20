@@ -18,11 +18,6 @@ import com.example.myrealtripwithhyunndy.rsshelper.*
 import kotlinx.android.synthetic.main.fragment_rssfeed.*
 import kotlinx.android.synthetic.main.item_news.view.*
 
-/**
-다 받고. ViewModel에 저장해놨잖아.
-
- 그 다음 10개씩 끊어서. 하자고!
- */
 
 class RSSFeedFragment : Fragment(), SwipeRefreshLayout.OnRefreshListener {
 
@@ -40,7 +35,7 @@ class RSSFeedFragment : Fragment(), SwipeRefreshLayout.OnRefreshListener {
         viewModel.getRSSList()?.observe(viewLifecycleOwner, Observer {
                 RSSFeedListAdapter.newsList = it
                 RSSFeedListAdapter.notifyDataSetChanged()
-                if(requestJsoup) requestJsoup = false
+                requestJsoup = false
                 swipeLayout.isRefreshing = false
         })
 
@@ -57,13 +52,7 @@ class RSSFeedFragment : Fragment(), SwipeRefreshLayout.OnRefreshListener {
         // 어댑터 연결
         RSSFeedListAdapter = RSSFeedRecyclerViewAdapter { (context as OnNewsSelectedListner).onNewsSelected(it) }
 
-        rss_recylerview.apply {
-            setHasFixedSize(true)
-            val linearLayout = LinearLayoutManager(context)
-            layoutManager = linearLayout
-            clearOnScrollListeners()
-            addOnScrollListener(RSSFeedScrollListener({ viewModel.getDetailNews() }, linearLayout))
-        }
+        setRecyclerAdapter()
 
         rss_recylerview.adapter = RSSFeedListAdapter
 
@@ -71,9 +60,20 @@ class RSSFeedFragment : Fragment(), SwipeRefreshLayout.OnRefreshListener {
         swipeLayout.setOnRefreshListener(this)
     }
 
+    fun setRecyclerAdapter() {
+        rss_recylerview.apply {
+            setHasFixedSize(true)
+            val linearLayout = LinearLayoutManager(context)
+            layoutManager = linearLayout
+            clearOnScrollListeners()
+            addOnScrollListener(RSSFeedScrollListener({ viewModel.getDetailNews() }, linearLayout))
+        }
+    }
+
     override fun onRefresh() {
         RSSFeedListAdapter.newsList?.clear()
         RSSFeedListAdapter.notifyDataSetChanged()
+        setRecyclerAdapter()
         viewModel.refresh()
         viewModel.loadRSSList()
     }
@@ -84,26 +84,6 @@ class RSSFeedFragment : Fragment(), SwipeRefreshLayout.OnRefreshListener {
 
         var newsList: MutableList<RSSItem>? = null
 
-        /*
-        //@TODO
-        // MOVIE 혹은 LOADING 아이템의 종류를 파악하기 위해
-        private lateinit var items: ArrayList<ViewType> // (1)
-
-        private val loadingItem = object : ViewType { // (3)
-            override fun getViewType() = AdapterType.LOADING
-        }
-
-        // 두 종류의 어댑터를 위한 배열 컬렉션
-        private var delegateAdapters = SparseArrayCompat<ItemAdapter>()
-
-        init{
-            delegateAdapters.put(AdapterType.LOADING, LoadingItemAdapter())
-            delegateAdapters.put(AdapterType.NEWS, MovieItemAdapter(listener))
-            items = ArrayList()
-            items.add(loadingItem)
-        }
-         private inner class LoadingViewHolder(view: View) : RecyclerView.ViewHolder(view)
-         */
         private inner class CustomViewHolder(view: View) : RecyclerView.ViewHolder(view)
 
 

@@ -1,6 +1,7 @@
 package com.example.myrealtripwithhyunndy
 
 import android.os.Bundle
+import android.os.Handler
 import androidx.appcompat.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
@@ -34,6 +35,8 @@ enum class ACTIVITYSTATE(var value : Int) {
 @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
 class MainActivity : AppCompatActivity(), RSSFeedFragment.OnNewsSelectedListner {
 
+
+    private val SPLASH_REMAIN_TIME: Long = 6000
     private lateinit var model : RSSFeedViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,7 +48,14 @@ class MainActivity : AppCompatActivity(), RSSFeedFragment.OnNewsSelectedListner 
         model.loadRSSList()
 
         // rss 목록 프래그먼트 실행
-        supportFragmentManager.beginTransaction().replace(R.id.mainframe, RSSFeedFragment()).commit()
+        supportFragmentManager.beginTransaction().replace(R.id.mainframe, SplashFragment()).commit()
+
+        Handler().postDelayed({
+            // rss 목록 프래그먼트 실행
+            supportFragmentManager.beginTransaction().replace(R.id.mainframe, RSSFeedFragment()).commit()
+        }, SPLASH_REMAIN_TIME)
+
+
     }
 
     // RSS 목록의 아이템이 눌렸을 경우

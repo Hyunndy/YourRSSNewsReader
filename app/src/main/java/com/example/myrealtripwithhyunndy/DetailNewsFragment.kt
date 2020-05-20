@@ -57,8 +57,6 @@ class DetailNewsFragment : Fragment() {
             news_web.loadUrl(newsItem?.link)
         }
 
-        news_title_detail.text = newsItem?.title
-
     }
 
     var getNews : (RSSFeedViewModel) -> RSSItem? = { model : RSSFeedViewModel ->
